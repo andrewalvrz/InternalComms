@@ -51,20 +51,20 @@ The server uses a robust, thread-safe architecture:
 ### Message Flow Diagram
 
 ```
-graph LR
-    subgraph Client-Server Architecture (Network)
+flowchart LR
+    subgraph Client_Server_Architecture_Network
         C1[Client 1] -->|gRPC Stream| R[Server Main Stream Handler]
         C2[Client 2] -->|gRPC Stream| R
         C3[Client 3] -->|gRPC Stream| R
         R -->|Broadcast to Queues| B
     end
 
-    subgraph Internal Server Flow
+    subgraph Internal_Server_Flow
         B(Message Broadcast) --> Q1[Client 1 Queue]
         B --> Q2[Client 2 Queue]
         B --> Q3[Client 3 Queue]
 
-        subgraph Client Threads (Sender/Listener)
+        subgraph Client_Threads_Sender_Listener
             T1[Thread 1: Listens & Sends] --> Q1
             T2[Thread 2: Listens & Sends] --> Q2
             T3[Thread 3: Listens & Sends] --> Q3
@@ -78,7 +78,6 @@ graph LR
         T2 -->|Sends over gRPC| C2
         T3 -->|Sends over gRPC| C3
     end
-```
 
 ### 3. How to Set Up Your Own Server
 
