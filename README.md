@@ -1,4 +1,4 @@
-# 💬 gRPC Chatroom over Tailscale
+# gRPC Chatroom over Tailscale
 
 ## Overview
 
@@ -50,7 +50,7 @@ The server uses a robust, thread-safe architecture:
 
 ### Message Flow Diagram
 
-```
+```mermaid
 flowchart LR
     subgraph Client_Server_Architecture_Network
         C1[Client 1] -->|gRPC Stream| R[Server Main Stream Handler]
@@ -58,22 +58,18 @@ flowchart LR
         C3[Client 3] -->|gRPC Stream| R
         R -->|Broadcast to Queues| B
     end
-
     subgraph Internal_Server_Flow
         B(Message Broadcast) --> Q1[Client 1 Queue]
         B --> Q2[Client 2 Queue]
         B --> Q3[Client 3 Queue]
-
         subgraph Client_Threads_Sender_Listener
             T1[Thread 1: Listens & Sends] --> Q1
             T2[Thread 2: Listens & Sends] --> Q2
             T3[Thread 3: Listens & Sends] --> Q3
         end
-
         Q1 -->|Reads Message| T1
         Q2 -->|Reads Message| T2
         Q3 -->|Reads Message| T3
-
         T1 -->|Sends over gRPC| C1
         T2 -->|Sends over gRPC| C2
         T3 -->|Sends over gRPC| C3
@@ -123,6 +119,164 @@ The server starts listening on port 50051.
 
 - Using Tailscale ensures the chat server is not exposed to the public internet.
 - Token-based authentication prevents unauthorized users from joining.
+
+## 📝 Using `chat.proto` to Start the gRPC Chatroom Server
+
+### 1. What `chat.proto` Is
+
+The `chat.proto` file is the protocol buffer definition that describes the messages and services for the chat application:
+
+**Messages**: Define the data structure sent between server and clients. Example:
+
+```protobuf
+message Message {
+    string user = 1;
+    string text = 2;
+}
+```
+
+**Services**: Define the gRPC service and RPC methods. Example:
+
+```protobuf
+service ChatService {
+    rpc Join(stream Message) returns (stream Message);
+}
+```
+
+The `Join` RPC is bidirectional streaming, allowing both server and client to continuously send and receive messages asynchronously.
+
+### 2. How the Server Uses `chat.proto`
+
+**Generate Python gRPC Code**:
+
+From the server machine, run:
+
+```bash
+python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. chat.proto
+```
+
+This generates:
+- `chat_pb2.py` → Python classes for the messages
+- `chat_pb2_grpc.py` → Python classes for the gRPC service stub and server
+
+**`server.py` Uses These Files**:
+
+Imports the generated classes:
+
+```python
+import chat_pb2
+import chat_pb2_grpc
+```
+
+- Implements the `ChatServiceServicer` class, which contains the server-side logic for `Join`.
+- Uses threads and queues to manage multiple clients and broadcast messages.
+
+**Start the Server**:
+
+```bash
+python server.py
+```
+
+- The server listens on a chosen port (default `50051`)
+- Prints connection events, messages, and disconnections
+
+At this point, the server is ready to accept client connections over the network.
+
+## 🔄 Recreating the Chatroom with Your Own Server
+
+If someone wants to set up their own server and clients, using your `server.py`, `client.py`, and `chat.proto`:
+
+### Step 1: Set Up a Server Machine
+
+- Can be a cloud VM (Azure, AWS, GCP) or a physical Linux machine
+- Ensure Python 3.12+ is installed
+
+### Step 2: Install Dependencies
+
+```bash
+sudo apt update
+sudo apt install python3-venv python3-pip -y
+python3 -m venv venv
+source venv/bin/activate
+pip install grpcio grpcio-tools tailscale
+```
+
+### Step 3: Set Up Tailscale VPN
+
+Install Tailscale on the server:
+
+```bash
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up --authkey=<your-auth-key>
+```
+
+Check the server's Tailscale IP:
+
+```bash
+tailscale status
+```
+
+This private IP will be used by all clients to connect.
+
+### Step 4: Place the Server Files
+
+- Copy `server.py` and `chat.proto` to the server machine
+- Generate Python gRPC code:
+
+```bash
+python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. chat.proto
+```
+
+- Start the server:
+
+```bash
+python server.py
+```
+
+Server is now running and ready to accept connections from clients.
+
+### Step 5: Set Up Client Machines
+
+On each client (Linux, WSL2, Windows, or mobile):
+
+**Install Python 3.12+ and virtual environment**:
+
+```bash
+sudo apt update
+sudo apt install python3-venv python3-pip -y
+python3 -m venv venv
+source venv/bin/activate
+```
+
+**Install dependencies**:
+
+```bash
+pip install grpcio grpcio-tools tailscale
+```
+
+**Copy `client.py` and `chat.proto` to the client machine**
+
+**Generate Python gRPC code**:
+
+```bash
+python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. chat.proto
+```
+
+**Start Tailscale VPN on the client**:
+
+```bash
+sudo tailscale up --authkey=<client-auth-key>
+tailscale status
+```
+
+**Run the client**:
+
+```bash
+python client.py
+```
+
+- Enter username and token
+- Client connects to the server's Tailscale IP and starts chatting
 
 ## 🚀 Installation & Client Setup
 
