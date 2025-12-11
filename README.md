@@ -78,6 +78,7 @@ flowchart LR
         T2 -->|Sends over gRPC| C2
         T3 -->|Sends over gRPC| C3
     end
+```
 
 ### 3. How to Set Up Your Own Server
 
