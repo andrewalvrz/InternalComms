@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package chat;
+
+service Chat {
+  // Bidirectional streaming RPC
+  rpc Join(stream Message) returns (stream Message);
+}
+
+message Message {
+  string user = 1;
+  string text = 2;
+}
+
